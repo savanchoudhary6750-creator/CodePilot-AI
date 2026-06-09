@@ -1,6 +1,6 @@
 import React from 'react';
 import { AuthProvider, ThemeProvider } from '../state';
-import { ErrorBoundary } from '../shared/components';
+import { ErrorBoundary } from '../core';
 
 const Providers = ({ children }) => {
   return (

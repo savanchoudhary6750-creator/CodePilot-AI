@@ -2,7 +2,7 @@ import React from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, ThemeProvider } from '../state';
-import { ErrorBoundary } from '../shared/components';
+import { ErrorBoundary } from '../core';
 import router from './routes';
 
 function App() {

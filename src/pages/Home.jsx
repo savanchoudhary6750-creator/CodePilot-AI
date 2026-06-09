@@ -15,7 +15,7 @@ import {
   FiClock,
 } from "react-icons/fi";
 import PageLayout, { Section, Container, Hero } from "../layouts/PageLayout";
-import ChatInterface from "../features/ai/ChatInterface";
+import { ChatInterface } from "../features";
 
 export default function Home() {
   const [code, setCode] = useState("");

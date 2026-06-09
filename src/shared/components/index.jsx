@@ -2,7 +2,6 @@ export { default as Button } from './Button';
 export { default as Card } from './Card';
 export { default as Navbar } from './Navbar';
 export { default as Footer } from './Footer';
-export { default as ErrorBoundary } from './ErrorBoundary';
 export { default as LoadingSpinner } from './LoadingSpinner';
 export { default as Modal } from './Modal';
 export { default as Terminal } from './Terminal';
