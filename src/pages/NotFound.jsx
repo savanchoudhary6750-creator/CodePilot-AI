@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import PageLayout, { Container } from '../components/PageLayout';
+import PageLayout, { Container } from '../layouts/PageLayout';
 
 const NotFound = () => {
   return (

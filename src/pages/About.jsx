@@ -12,7 +12,7 @@ import {
   FiBriefcase,
   FiArrowRight
 } from 'react-icons/fi';
-import PageLayout, { Section, Container, Hero } from '../components/PageLayout';
+import PageLayout, { Section, Container, Hero } from '../layouts/PageLayout';
 
 const About = () => {
 

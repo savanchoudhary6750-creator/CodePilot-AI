@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import PageLayout, { Section, Container, Hero } from '../components/PageLayout';
+import PageLayout, { Section, Container, Hero } from '../layouts/PageLayout';
 
 const Contact = () => {
   const [formData, setFormData] = useState({

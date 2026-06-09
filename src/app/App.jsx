@@ -1,8 +1,8 @@
 import React from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider, ThemeProvider } from './context';
-import { ErrorBoundary } from './components';
+import { AuthProvider, ThemeProvider } from '../state';
+import { ErrorBoundary } from '../shared/components';
 import router from './routes';
 
 function App() {

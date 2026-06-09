@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiCheckCircle, FiAlertTriangle, FiXCircle, FiCopy, FiDownload, FiCode, FiShield, FiZap, FiFileText } from "react-icons/fi";
-import PageLayout, { Container } from '../components/PageLayout';
-import { LoadingSpinner } from '../components';
+import PageLayout, { Container } from '../layouts/PageLayout';
+import { LoadingSpinner } from '../shared/components';
 
 function Review() {
   const [result, setResult] = useState(null);
