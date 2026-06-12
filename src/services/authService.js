@@ -20,6 +20,14 @@ class AuthService {
     localStorage.removeItem('user');
   }
   
+  async getMe() {
+    const response = await apiService.get('/auth/me');
+    if (response.user) {
+      localStorage.setItem('user', JSON.stringify(response.user));
+    }
+    return response;
+  }
+  
   isAuthenticated() {
     const token = localStorage.getItem('token');
     return !!token;

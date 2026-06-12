@@ -19,14 +19,26 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem('token');
-      const userStr = localStorage.getItem('user');
-      if (token && userStr) {
-        setUser(JSON.parse(userStr));
-        setIsAuthenticated(true);
+      if (token) {
+        const response = await authService.getMe();
+        if (response.success && response.user) {
+          setUser(response.user);
+          setIsAuthenticated(true);
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+      } else {
+        setIsAuthenticated(false);
       }
     } catch (err) {
-      setError('Failed to check authentication status');
-      console.error('Error loading user from localStorage:', err);
+      console.error('Session refresh failed:', err);
+      setUser(null);
+      setIsAuthenticated(false);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
     } finally {
       setLoading(false);
     }

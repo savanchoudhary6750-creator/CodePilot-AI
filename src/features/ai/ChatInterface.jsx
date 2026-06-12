@@ -2,6 +2,55 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FiSend, FiUser, FiCpu, FiCopy, FiThumbsUp, FiThumbsDown } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
+const renderMessageContent = (content) => {
+  if (!content) return null;
+  const parts = content.split(/(```[\s\S]*?```)/g);
+
+  return parts.map((part, index) => {
+    if (part.startsWith('```') && part.endsWith('```')) {
+      const match = part.match(/```(\w*)\n([\s\S]*?)```/);
+      const language = match ? match[1] : '';
+      const code = match ? match[2].trim() : part.slice(3, -3).trim();
+
+      return (
+        <div key={index} className="my-3 rounded-xl overflow-hidden border border-slate-800 bg-slate-950 font-mono text-xs shadow-lg">
+          <div className="bg-slate-900 px-4 py-2 flex justify-between items-center text-gray-450 border-b border-slate-850 text-[10px]">
+            <span className="uppercase tracking-wider font-semibold text-gray-500">{language || 'code'}</span>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(code);
+                toast.success('Code copied!');
+              }}
+              className="hover:text-white transition-colors bg-slate-800/50 hover:bg-slate-800 px-2 py-1 rounded border border-slate-800 text-[10px]"
+            >
+              Copy
+            </button>
+          </div>
+          <pre className="p-4 overflow-x-auto text-green-400 whitespace-pre text-left">
+            <code>{code}</code>
+          </pre>
+        </div>
+      );
+    } else {
+      const inlineParts = part.split(/(`[^`\n]+`)/g);
+      return (
+        <span key={index}>
+          {inlineParts.map((subPart, subIdx) => {
+            if (subPart.startsWith('`') && subPart.endsWith('`')) {
+              return (
+                <code key={subIdx} className="bg-slate-950 text-pink-400 px-1.5 py-0.5 rounded font-mono text-xs border border-slate-850">
+                  {subPart.slice(1, -1)}
+                </code>
+              );
+            }
+            return subPart;
+          })}
+        </span>
+      );
+    }
+  });
+};
+
 const ChatInterface = ({ onSendMessage, placeholder = "Ask me anything about your code...", initialMessages = [] }) => {
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
@@ -91,7 +140,7 @@ const ChatInterface = ({ onSendMessage, placeholder = "Ask me anything about you
                     : 'bg-slate-800 text-gray-100 border border-slate-700'
                 }`}
               >
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                <div className="text-sm leading-relaxed whitespace-pre-wrap">{renderMessageContent(message.content)}</div>
                 {message.role === 'assistant' && (
                   <div className="flex gap-2 mt-3 pt-3 border-t border-slate-700">
                     <button
