@@ -14,7 +14,7 @@ const renderMessageContent = (content) => {
 
       return (
         <div key={index} className="my-3 rounded-xl overflow-hidden border border-slate-800 bg-slate-950 font-mono text-xs shadow-lg">
-          <div className="bg-slate-900 px-4 py-2 flex justify-between items-center text-gray-450 border-b border-slate-850 text-[10px]">
+          <div className="bg-slate-900 px-4 py-2 flex justify-between items-center text-gray-400 border-b border-slate-850 text-[10px]">
             <span className="uppercase tracking-wider font-semibold text-gray-500">{language || 'code'}</span>
             <button
               onClick={() => {

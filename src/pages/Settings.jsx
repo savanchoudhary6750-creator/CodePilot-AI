@@ -4,10 +4,11 @@ import { useAuthContext } from '../state/context/AuthContext';
 import { useThemeContext } from '../state/context/ThemeContext';
 import PageLayout, { Container } from '../layouts/PageLayout';
 import { FiUser, FiLock, FiCheck, FiMoon, FiSun, FiSettings } from 'react-icons/fi';
+import authService from '../services/authService';
 import toast from 'react-hot-toast';
 
 export default function Settings() {
-  const { user } = useAuthContext();
+  const { user, updateProfile } = useAuthContext();
   const { theme, toggleTheme, isDark } = useThemeContext();
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -19,10 +20,8 @@ export default function Settings() {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setUpdatingProfile(true);
-    setTimeout(() => {
-      setUpdatingProfile(false);
-      toast.success('Profile updated successfully (Simulation)');
-    }, 1000);
+    await updateProfile({ name, email });
+    setUpdatingProfile(false);
   };
 
   const handleUpdatePassword = async (e) => {
@@ -32,13 +31,22 @@ export default function Settings() {
       return;
     }
     setUpdatingPassword(true);
-    setTimeout(() => {
+    try {
+      const response = await authService.updatePassword({ currentPassword, newPassword });
+      if (response.success) {
+        toast.success(response.message || 'Password updated successfully!');
+        setCurrentPassword('');
+        setNewPassword('');
+      } else {
+        toast.error(response.message || 'Failed to update password');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to update password');
+    } finally {
       setUpdatingPassword(false);
-      setCurrentPassword('');
-      setNewPassword('');
-      toast.success('Password updated successfully (Simulation)');
-    }, 1200);
+    }
   };
+
 
   // Motion variants
   const containerVariants = {
@@ -92,9 +100,9 @@ export default function Settings() {
 
             <div className="bg-[#111827]/60 border border-slate-800 p-5 rounded-2xl">
               <h3 className="font-bold text-xs text-slate-400 uppercase tracking-wider mb-2">Subscription</h3>
-              <p className="text-xs text-slate-450 leading-relaxed mb-4 font-medium">You are currently on the Free Developer plan.</p>
-              <div className="text-xs text-emerald-450 font-bold flex items-center gap-1.5">
-                <FiCheck className="w-4 h-4 text-emerald-450" /> Active Status
+              <p className="text-xs text-slate-400 leading-relaxed mb-4 font-medium">You are currently on the Free Developer plan.</p>
+              <div className="text-xs text-emerald-400 font-bold flex items-center gap-1.5">
+                <FiCheck className="w-4 h-4 text-emerald-400" /> Active Status
               </div>
             </div>
           </motion.div>

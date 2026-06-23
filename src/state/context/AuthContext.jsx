@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useState, useEffect } from 'react';
 import authService from '../../services/authService';
 import toast from 'react-hot-toast';
 
@@ -9,11 +10,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
-  useEffect(() => {
-    checkAuth();
-  }, []);
-  
+
   const checkAuth = async () => {
     try {
       setLoading(true);
@@ -43,6 +40,10 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
+  
+  useEffect(() => {
+    checkAuth();
+  }, []);
   
   const login = async (credentials) => {
     try {
@@ -104,6 +105,26 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
+
+  const updateProfile = async (profileData) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await authService.updateProfile(profileData);
+      if (response.user) {
+        setUser(response.user);
+        toast.success('Profile updated successfully!');
+        return { success: true, user: response.user };
+      }
+      throw new Error('Invalid response from server');
+    } catch (err) {
+      setError(err.message || 'Profile update failed');
+      toast.error(err.message || 'Profile update failed.');
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const value = {
     user,
@@ -113,7 +134,9 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     register,
+    updateProfile,
   };
+
   
   return (
     <AuthContext.Provider value={value}>

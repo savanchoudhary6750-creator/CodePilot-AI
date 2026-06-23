@@ -1,22 +1,17 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useState, useEffect } from 'react';
 
 export const ThemeContext = createContext(null);
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState('dark');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
+  const [theme, setTheme] = useState(() => {
     try {
-      const savedTheme = localStorage.getItem('theme') || 'dark';
-      setTheme(savedTheme);
-      document.documentElement.classList.add(savedTheme);
+      return localStorage.getItem('theme') || 'dark';
     } catch (err) {
-      console.error('Theme initialization error:', err);
-    } finally {
-      setLoading(false);
+      return 'dark';
     }
-  }, []);
+  });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     try {

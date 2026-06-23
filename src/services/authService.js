@@ -27,11 +27,24 @@ class AuthService {
     }
     return response;
   }
-  
+
+  async updateProfile(profileData) {
+    const response = await apiService.put('/auth/profile', profileData);
+    if (response.user) {
+      localStorage.setItem('user', JSON.stringify(response.user));
+    }
+    return response;
+  }
+
+  async updatePassword(passwordData) {
+    return await apiService.put('/auth/password', passwordData);
+  }
+
   isAuthenticated() {
     const token = localStorage.getItem('token');
     return !!token;
   }
+
   
   getCurrentUser() {
     const user = localStorage.getItem('user');

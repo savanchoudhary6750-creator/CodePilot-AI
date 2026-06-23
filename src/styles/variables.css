@@ -1,14 +1,14 @@
 /* Design System Variables */
 :root {
   /* Requested Color System */
-  --color-bg-primary: #0B1120;
-  --color-bg-secondary: #111827;
-  --color-bg-tertiary: #1F2937;
+  --color-bg-primary: #020617;
+  --color-bg-secondary: #0F172A;
+  --color-bg-tertiary: #1E293B;
   --color-bg-elevated: #1E293B;
   
-  --color-border: #334155;
-  --color-border-light: #475569;
-  --color-border-dark: #1E293B;
+  --color-border: #1E293B;
+  --color-border-light: #334155;
+  --color-border-dark: #0F172A;
   
   --color-primary: #6366F1;
   --color-primary-dark: #4F46E5;
@@ -22,9 +22,9 @@
   --color-accent-dark: #DB2777;
   --color-accent-light: #F472B6;
   
-  --color-success: #10B981;
-  --color-success-dark: #059669;
-  --color-success-light: #34D399;
+  --color-success: #22C55E;
+  --color-success-dark: #16A34A;
+  --color-success-light: #4ADE80;
   
   --color-warning: #F59E0B;
   --color-warning-dark: #D97706;
@@ -129,8 +129,8 @@
 
 /* Force dark system colors as default */
 .dark {
-  --color-bg-primary: #0B1120;
-  --color-bg-secondary: #111827;
+  --color-bg-primary: #020617;
+  --color-bg-secondary: #0F172A;
   --color-bg-elevated: #1E293B;
-  --color-border: #334155;
+  --color-border: #1E293B;
 }

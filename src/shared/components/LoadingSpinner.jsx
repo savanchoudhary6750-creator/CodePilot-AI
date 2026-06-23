@@ -1,5 +1,4 @@
 import React from 'react';
-import { FiLoader } from 'react-icons/fi';
 
 const LoadingSpinner = ({ size = 'md', text = 'Loading...' }) => {
   const sizeClasses = {
@@ -11,11 +10,9 @@ const LoadingSpinner = ({ size = 'md', text = 'Loading...' }) => {
 
   return (
     <div className="flex flex-col items-center justify-center gap-4">
-      <div className={`${sizeClasses[size]} border-4 border-blue-500 border-t-transparent rounded-full animate-spin`}>
-        <FiLoader className={`text-blue-500 ${sizeClasses[size]}`} />
-      </div>
+      <div className={`${sizeClasses[size]} border-4 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin`} />
       {text && (
-        <p className="text-gray-400 text-sm md:text-base animate-pulse">{text}</p>
+        <p className="text-slate-400 text-xs font-semibold animate-pulse tracking-wide uppercase">{text}</p>
       )}
     </div>
   );

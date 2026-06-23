@@ -1,8 +1,9 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 const PageLayout = ({ children, className = '' }) => {
   return (
-    <div className={`w-full ${className}`}>
+    <div className={`w-full bg-[#020617] text-slate-100 ${className}`}>
       {children}
     </div>
   );
@@ -10,15 +11,15 @@ const PageLayout = ({ children, className = '' }) => {
 
 export const Section = ({ children, className = '', size = 'default', id }) => {
   const sizeClasses = {
-    default: 'section',
-    large: 'section-lg',
-    small: 'section-sm',
+    default: 'py-16 md:py-24',
+    large: 'py-24 md:py-32',
+    small: 'py-10 md:py-16',
   };
 
   return (
     <section
       id={id}
-      className={`${sizeClasses[size]} ${className}`}
+      className={`relative z-10 px-4 sm:px-6 lg:px-8 ${sizeClasses[size]} ${className}`}
     >
       {children}
     </section>
@@ -34,7 +35,7 @@ export const Container = ({ children, className = '', maxWidth = '7xl' }) => {
   };
 
   return (
-    <div className={`container ${maxWidthClasses[maxWidth]} ${className}`}>
+    <div className={`mx-auto w-full ${maxWidthClasses[maxWidth]} ${className}`}>
       {children}
     </div>
   );
@@ -49,34 +50,57 @@ export const Hero = ({
   className = '' 
 }) => {
   return (
-    <Section size="large" className={className}>
-      <Container maxWidth="6xl" className="text-center">
+    <Section size="large" className={`overflow-hidden ${className}`}>
+      {/* Decorative dynamic orb */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-indigo-500/10 to-purple-600/10 rounded-full blur-[140px] pointer-events-none z-0"></div>
+
+      <Container maxWidth="6xl" className="text-center relative z-10">
         {badge && (
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-semibold mb-8 backdrop-blur-sm fade-in-up">
-            <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
+          <motion.span 
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-bold uppercase tracking-wider mb-8 backdrop-blur-sm"
+          >
+            <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse"></span>
             {badge}
-          </span>
+          </motion.span>
         )}
         
-        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 fade-in-up stagger-1">
+        <motion.h1 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight tracking-tight mb-6"
+        >
           {title}{' '}
           {gradientText && (
-            <span className="bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent gradient-animate">
+            <span className="bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
               {gradientText}
             </span>
           )}
-        </h1>
+        </motion.h1>
         
         {subtitle && (
-          <p className="text-base sm:text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-10 leading-relaxed fade-in-up stagger-2">
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-sm sm:text-base md:text-lg text-slate-400 max-w-3xl mx-auto mb-10 leading-relaxed font-medium"
+          >
             {subtitle}
-          </p>
+          </motion.p>
         )}
         
         {buttons && (
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center fade-in-up stagger-3">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+          >
             {buttons}
-          </div>
+          </motion.div>
         )}
       </Container>
     </Section>

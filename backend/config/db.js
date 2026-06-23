@@ -1,13 +1,17 @@
 import mongoose from 'mongoose';
 
 const connectDB = async () => {
+  const uri = process.env.MONGODB_URI;
+  
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    // Attempt mongoose connection
+    const conn = await mongoose.connect(uri);
+    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    return conn;
   } catch (error) {
-    console.error(`MongoDB Connection Error: ${error.message}`);
-    console.warn('Server will continue running without MongoDB. Some features may not work.');
-    // Don't exit the process, allow server to run without MongoDB for development
+    console.error('❌ MongoDB Connection Error failed at backend/config/db.js:L10');
+    console.error(`Error details: ${error.stack || error.message}`);
+    process.exit(1); // Force process termination on failure
   }
 };
 

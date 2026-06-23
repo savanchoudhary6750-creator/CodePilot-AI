@@ -4,21 +4,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthContext } from '../state/context/AuthContext';
 import { aiService } from '../services/aiService';
 import PageLayout, { Container } from '../layouts/PageLayout';
-import { LoadingSpinner } from '../shared/components';
+import { LoadingSpinner, MetricCard, Button, Card } from '../shared/components';
 import ChatInterface from '../features/ai/ChatInterface';
 import { 
-  FiFileText, 
-  FiMessageSquare, 
-  FiCode, 
-  FiTrendingUp, 
-  FiTrash2, 
-  FiPlus, 
-  FiClock, 
-  FiArrowRight, 
-  FiSliders,
-  FiActivity,
-  FiShield
-} from 'react-icons/fi';
+  LuFileText, 
+  LuMessageSquare, 
+  LuCode, 
+  LuTrendingUp, 
+  LuTrash2, 
+  LuPlus, 
+  LuClock, 
+  LuArrowRight, 
+  LuSlidersHorizontal,
+  LuActivity,
+  LuShield
+} from 'react-icons/lu';
 import toast from 'react-hot-toast';
 
 export default function Dashboard() {
@@ -29,10 +29,6 @@ export default function Dashboard() {
   const [activeConvId, setActiveConvId] = useState(null);
   const [activeConvMessages, setActiveConvMessages] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
 
   const fetchDashboardData = async () => {
     try {
@@ -50,6 +46,10 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
   const loadConversation = async (convId) => {
     try {
@@ -117,10 +117,23 @@ export default function Dashboard() {
     ? Math.round(reviews.reduce((acc, r) => acc + r.score, 0) / totalReviews)
     : 0;
 
-  // Compute vulnerabilities caught
+  // Compute metrics average across reviews
+  const avgComplexity = totalReviews > 0
+    ? Math.round(reviews.reduce((acc, r) => acc + (r.metrics?.complexity || 50), 0) / totalReviews)
+    : 0;
+  const avgSecurity = totalReviews > 0
+    ? Math.round(reviews.reduce((acc, r) => acc + (r.metrics?.security || 50), 0) / totalReviews)
+    : 0;
+  const avgPerformance = totalReviews > 0
+    ? Math.round(reviews.reduce((acc, r) => acc + (r.metrics?.performance || 50), 0) / totalReviews)
+    : 0;
+  const avgMaintainability = totalReviews > 0
+    ? Math.round(reviews.reduce((acc, r) => acc + (r.metrics?.maintainability || 50), 0) / totalReviews)
+    : 0;
+
   const bugsCaught = reviews.reduce((acc, r) => acc + (r.bugs?.length || 0), 0);
   const securityCaught = reviews.reduce((acc, r) => acc + (r.security?.length || 0), 0);
-  const totalVulnerabilities = bugsCaught + securityCaught;
+  const totalIssues = bugsCaught + securityCaught;
 
   // Motion configurations
   const containerVariants = {
@@ -138,14 +151,14 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <PageLayout className="min-h-screen flex items-center justify-center bg-[#0B1120] text-white">
-        <LoadingSpinner size="xl" text="Loading dashboard details..." />
+      <PageLayout className="min-h-screen flex items-center justify-center bg-[#020617] text-white">
+        <LoadingSpinner size="xl" text="Loading workspace details..." />
       </PageLayout>
     );
   }
 
   return (
-    <PageLayout className="bg-[#0B1120] text-slate-100 min-h-[calc(100vh-4rem)] pb-12 relative overflow-hidden">
+    <PageLayout className="bg-[#020617] text-slate-100 min-h-[calc(100vh-4rem)] pb-12 relative overflow-hidden">
       {/* Decorative Orbs */}
       <div className="absolute top-1/4 left-[-10%] w-96 h-96 bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-1/4 right-[-10%] w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] pointer-events-none"></div>
@@ -162,76 +175,70 @@ export default function Dashboard() {
             <h1 className="text-3xl font-extrabold tracking-tight">
               Developer <span className="bg-gradient-to-r from-indigo-400 to-purple-500 bg-clip-text text-transparent">Workspace</span>
             </h1>
-            <p className="text-slate-400 text-sm mt-1">Workspace account status: Active Developer • {user?.name}</p>
+            <p className="text-slate-400 text-xs mt-1">Workspace account: Active Developer • {user?.name}</p>
           </div>
           <div className="flex gap-3">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+            <Button
+              variant="primary"
               onClick={() => navigate('/')}
-              className="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 rounded-xl text-sm font-semibold flex items-center gap-2 hover:shadow-lg transition-all"
+              className="flex items-center gap-2"
             >
-              <FiCode />
+              <LuCode className="w-4 h-4" />
               New Review
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() => navigate('/settings')}
-              className="px-4 py-2.5 bg-[#1E293B] border border-slate-800 hover:bg-slate-800 hover:border-slate-700 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all"
+              className="flex items-center gap-2"
             >
-              <FiSliders />
+              <LuSlidersHorizontal className="w-4 h-4" />
               Settings
-            </motion.button>
+            </Button>
           </div>
         </motion.div>
 
-        {/* Stats Grid */}
+        {/* Redesigned Metrics Grid */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+          className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8"
         >
-          <motion.div variants={cardVariants} className="bg-[#111827]/70 border border-slate-800/80 p-5 rounded-2xl flex items-center gap-4 hover:border-slate-700/80 transition-all shadow-md">
-            <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-              <FiFileText className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-white">{totalReviews}</div>
-              <div className="text-xs text-slate-400 font-medium">Code Reviews Run</div>
-            </div>
-          </motion.div>
-
-          <motion.div variants={cardVariants} className="bg-[#111827]/70 border border-slate-800/80 p-5 rounded-2xl flex items-center gap-4 hover:border-slate-700/80 transition-all shadow-md">
-            <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-              <FiTrendingUp className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-white">{avgScore}%</div>
-              <div className="text-xs text-slate-400 font-medium">Average Quality Score</div>
-            </div>
-          </motion.div>
-
-          <motion.div variants={cardVariants} className="bg-[#111827]/70 border border-slate-800/80 p-5 rounded-2xl flex items-center gap-4 hover:border-slate-700/80 transition-all shadow-md">
-            <div className="w-12 h-12 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400">
-              <FiMessageSquare className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-white">{totalChats}</div>
-              <div className="text-xs text-slate-400 font-medium">Saved Chats</div>
-            </div>
-          </motion.div>
-
-          <motion.div variants={cardVariants} className="bg-[#111827]/70 border border-slate-800/80 p-5 rounded-2xl flex items-center gap-4 hover:border-slate-700/80 transition-all shadow-md">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-450">
-              <FiShield className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-white">{totalVulnerabilities}</div>
-              <div className="text-xs text-slate-400 font-medium">Security Issues Flagged</div>
-            </div>
-          </motion.div>
+          <MetricCard
+            title="Total Issues"
+            value={totalIssues}
+            icon={LuFileText}
+            description="Detected vulnerabilities & bugs"
+            status={totalIssues > 5 ? 'danger' : totalIssues > 0 ? 'warning' : 'success'}
+          />
+          <MetricCard
+            title="Security Score"
+            value={`${avgSecurity}%`}
+            icon={LuShield}
+            description="Average security evaluation"
+            status={avgSecurity >= 80 ? 'success' : avgSecurity >= 60 ? 'warning' : 'danger'}
+          />
+          <MetricCard
+            title="Performance"
+            value={`${avgPerformance}%`}
+            icon={LuTrendingUp}
+            description="Code execution efficiency"
+            status={avgPerformance >= 80 ? 'success' : avgPerformance >= 60 ? 'warning' : 'danger'}
+          />
+          <MetricCard
+            title="Code Quality"
+            value={`${avgScore}%`}
+            icon={LuCode}
+            description="Average syntax cleanliness"
+            status={avgScore >= 80 ? 'success' : avgScore >= 60 ? 'warning' : 'danger'}
+          />
+          <MetricCard
+            title="Maintainability"
+            value={`${avgMaintainability}%`}
+            icon={LuActivity}
+            description="Maintainability index"
+            status={avgMaintainability >= 80 ? 'success' : avgMaintainability >= 60 ? 'warning' : 'danger'}
+          />
         </motion.div>
 
         {/* Workspace Layout Grid */}
@@ -245,13 +252,13 @@ export default function Dashboard() {
               transition={{ duration: 0.5, delay: 0.1 }}
               className="bg-[#111827]/40 border border-slate-800 rounded-3xl p-6 shadow-xl"
             >
-              <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-                <FiActivity className="text-indigo-400" />
+              <h3 className="text-base font-bold text-white mb-2 flex items-center gap-2">
+                <LuActivity className="text-indigo-400" />
                 Code Health Trend
               </h3>
               <p className="text-xs text-slate-400 mb-6">Visual analysis metrics calculated from recent code review score trends</p>
               
-              <div className="w-full bg-[#0B1120] border border-slate-850 p-4 rounded-xl relative">
+              <div className="w-full bg-[#020617] border border-slate-850 p-4 rounded-xl relative">
                 {reviews.length === 0 ? (
                   <div className="h-24 flex items-center justify-center text-xs text-slate-500 italic">
                     Run reviews to generate code health charts
@@ -290,20 +297,20 @@ export default function Dashboard() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="bg-[#111827]/40 border border-slate-800 rounded-3xl p-6 shadow-xl"
             >
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <FiFileText className="text-blue-400" />
+              <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+                <LuFileText className="text-indigo-400" />
                 Recent Reviews
               </h3>
 
               {reviews.length === 0 ? (
                 <div className="text-center py-12 border border-dashed border-slate-800 rounded-xl">
-                  <FiCode className="w-10 h-10 text-gray-650 mx-auto mb-3" />
-                  <p className="text-slate-400 text-sm">No code reviews logged yet.</p>
+                  <LuCode className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+                  <p className="text-slate-400 text-xs">No code reviews logged yet.</p>
                   <button
                     onClick={() => navigate('/')}
                     className="mt-3 text-xs font-semibold text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1"
                   >
-                    Analyze your first snippet <FiArrowRight />
+                    Analyze your first snippet <LuArrowRight className="w-3 h-3" />
                   </button>
                 </div>
               ) : (
@@ -314,28 +321,29 @@ export default function Dashboard() {
                         onClick={() => navigate(`/review?id=${r._id}`)}
                         className="cursor-pointer flex-1"
                       >
-                        <h4 className="font-semibold text-sm text-slate-200 group-hover:text-indigo-400 transition-colors">
+                        <h4 className="font-bold text-sm text-slate-200 group-hover:text-indigo-400 transition-colors">
                           {r.summary}
                         </h4>
-                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                        <div className="flex items-center gap-3 text-[10px] font-semibold text-slate-500 mt-1">
                           <span>Quality Score: {r.score}/100</span>
                           <span>•</span>
                           <span>{new Date(r.createdAt).toLocaleDateString()}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button
+                        <Button
+                          variant="secondary"
+                          size="sm"
                           onClick={() => navigate(`/review?id=${r._id}`)}
-                          className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg text-slate-300 hover:text-white transition-colors"
                         >
                           View
-                        </button>
+                        </Button>
                         <button
                           onClick={(e) => handleDeleteReview(e, r._id)}
-                          className="p-2 hover:bg-red-500/10 hover:text-red-400 text-slate-500 rounded-lg transition-colors"
+                          className="p-2.5 hover:bg-red-500/10 hover:text-red-400 text-slate-600 rounded-xl transition-colors border border-transparent hover:border-red-500/10"
                           title="Delete review"
                         >
-                          <FiTrash2 size={14} />
+                          <LuTrash2 size={13} />
                         </button>
                       </div>
                     </div>
@@ -352,8 +360,8 @@ export default function Dashboard() {
               className="bg-[#111827]/40 border border-slate-800 rounded-3xl p-6 shadow-xl"
             >
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <FiMessageSquare className="text-purple-400" />
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <LuMessageSquare className="text-purple-400" />
                   Chat Threads
                 </h3>
                 {conversations.length > 0 && (
@@ -361,15 +369,15 @@ export default function Dashboard() {
                     onClick={handleStartNewChat}
                     className="text-xs font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1"
                   >
-                    <FiPlus /> New Chat
+                    <LuPlus className="w-3.5 h-3.5" /> New Chat
                   </button>
                 )}
               </div>
 
               {conversations.length === 0 ? (
                 <div className="text-center py-12 border border-dashed border-slate-800 rounded-xl">
-                  <FiMessageSquare className="w-10 h-10 text-gray-650 mx-auto mb-3" />
-                  <p className="text-slate-400 text-sm">No chat history found.</p>
+                  <LuMessageSquare className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+                  <p className="text-slate-400 text-xs">No chat history found.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -377,24 +385,24 @@ export default function Dashboard() {
                     <div
                       key={c._id}
                       onClick={() => loadConversation(c._id)}
-                      className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 flex justify-between items-start gap-3 ${
+                      className={`p-4 rounded-2xl border cursor-pointer transition-all duration-200 flex justify-between items-start gap-3 ${
                         activeConvId === c._id
-                          ? 'bg-purple-500/10 border-purple-500/40 shadow-glow'
-                          : 'bg-slate-900/60 border-slate-850 hover:border-slate-800'
+                          ? 'bg-purple-500/10 border-purple-500/40'
+                          : 'bg-[#111827]/60 border-slate-850 hover:border-slate-800'
                       }`}
                     >
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-sm text-slate-200 truncate">{c.title}</h4>
-                        <span className="text-[10px] text-slate-500 mt-1 block">
+                        <h4 className="font-bold text-xs text-slate-200 truncate">{c.title}</h4>
+                        <span className="text-[9px] font-semibold text-slate-500 mt-1 block">
                           Updated: {new Date(c.updatedAt).toLocaleDateString()}
                         </span>
                       </div>
                       <button
                         onClick={(e) => handleDeleteConversation(e, c._id)}
-                        className="p-1 hover:bg-red-500/10 hover:text-red-400 text-slate-650 rounded-md transition-colors"
+                        className="p-1.5 hover:bg-red-500/10 hover:text-red-400 text-slate-600 rounded-lg transition-colors"
                         title="Delete chat thread"
                       >
-                        <FiTrash2 size={12} />
+                        <LuTrash2 size={12} />
                       </button>
                     </div>
                   ))}
@@ -410,17 +418,17 @@ export default function Dashboard() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="bg-[#111827]/40 border border-slate-800 rounded-3xl h-[580px] overflow-hidden flex flex-col shadow-xl"
           >
-            <div className="p-4 border-b border-slate-800 bg-[#0B1120]/20 flex justify-between items-center">
+            <div className="p-4 border-b border-slate-800 bg-[#020617]/25 flex justify-between items-center">
               <div>
-                <h3 className="font-bold text-sm text-white">AI Assistant</h3>
-                <p className="text-[10px] text-slate-500 font-medium">
+                <h3 className="font-bold text-xs text-white">AI Assistant</h3>
+                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
                   {activeConvId ? 'Continuing Chat Thread' : 'New Assistant Session'}
                 </p>
               </div>
               {activeConvId && (
                 <button
                   onClick={handleStartNewChat}
-                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-[10px] font-semibold rounded-lg text-purple-400 hover:text-purple-300 transition-colors"
+                  className="px-2.5 py-1 bg-slate-850 hover:bg-slate-800 text-[10px] font-bold rounded-lg text-purple-400 hover:text-purple-300 transition-colors border border-slate-800"
                 >
                   New Thread
                 </button>

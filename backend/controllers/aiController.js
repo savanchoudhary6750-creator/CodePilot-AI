@@ -85,144 +85,13 @@ const CHAT_SYSTEM_PROMPT = `You are an AI coding assistant helping developers wi
 
 Be concise, practical, and provide code examples when helpful. If the user shares code, analyze it thoroughly and suggest specific improvements.`;
 
-// Code Review Fallback Generator
-const getFallbackAnalysis = (code) => {
-  const lines = code.split('\n');
-  const issues = [];
-  let score = 100;
-
-  // React checks
-  const reactHooks = ['useState', 'useEffect', 'useContext', 'useReducer', 'useCallback', 'useMemo', 'useRef'];
-  const hasReactHooks = reactHooks.some(hook => code.includes(hook));
-  const missingReactImport = hasReactHooks && !code.includes('import React') && !code.includes('from "react"');
-
-  if (missingReactImport) {
-    issues.push({
-      severity: 'High',
-      type: 'React',
-      message: 'Missing React import when using React hooks in React 18 or older environments',
-      line: Math.max(1, lines.findIndex(line => line.includes('useState') || line.includes('useEffect')) + 1),
-      suggestion: 'Add React import at the top of the file',
-      code: 'import React, { useState, useEffect } from "react";'
-    });
-    score -= 20;
-  }
-
-  // Immediate onClick check
-  const onClickPattern = /onClick=\{[^}]*\([^)]*\)[^}]*\}/g;
-  const onClickMatches = code.match(onClickPattern);
-  if (onClickMatches) {
-    onClickMatches.forEach((match) => {
-      const lineIndex = lines.findIndex(line => line.includes(match));
-      if (lineIndex !== -1) {
-        issues.push({
-          severity: 'High',
-          type: 'React',
-          message: 'Event handler executes function immediately instead of waiting for user click trigger',
-          line: lineIndex + 1,
-          suggestion: 'Wrap function call in an anonymous arrow function to defer execution',
-          code: 'onClick={() => handleClick()}'
-        });
-        score -= 15;
-      }
-    });
-  }
-
-  // var keyword check
-  if (code.includes('var ')) {
-    issues.push({
-      severity: 'Medium',
-      type: 'Best Practice',
-      message: 'Using var instead of let or const violates modern block-scoping standards',
-      line: lines.findIndex(line => line.includes('var')) + 1,
-      suggestion: 'Use let for variables that will be reassigned, or const for read-only constants',
-      code: 'const count = 10;'
-    });
-    score -= 10;
-  }
-
-  // Loose equality check
-  if (code.includes('==') || code.includes('!=')) {
-    const idx = lines.findIndex(line => line.includes('==') || line.includes('!='));
-    issues.push({
-      severity: 'Medium',
-      type: 'Best Practice',
-      message: 'Using loose equality operators (== or !=) can lead to unexpected type coercion bugs',
-      line: idx !== -1 ? idx + 1 : 1,
-      suggestion: 'Use strict equality (=== or !==) to preserve type comparison safety',
-      code: 'if (status === "active") {}'
-    });
-    score -= 10;
-  }
-
-  // eval check
-  if (code.includes('eval(')) {
-    issues.push({
-      severity: 'High',
-      type: 'Security',
-      message: 'Calling the eval() function represents a severe security risk that allows remote code execution (RCE)',
-      line: lines.findIndex(line => line.includes('eval')) + 1,
-      suggestion: 'Avoid eval() entirely. Parse JSON via JSON.parse or rewrite the logic securely',
-      code: '// Use JSON.parse(input) instead of eval(input)'
-    });
-    score -= 25;
-  }
-
-  // try-catch checking
-  if (!code.includes('try') && !code.includes('catch') && code.length > 60) {
-    issues.push({
-      severity: 'Medium',
-      type: 'Best Practice',
-      message: 'Missing try-catch block for handling potential runtime or network exceptions',
-      line: 1,
-      suggestion: 'Wrap operations that can fail in standard try-catch error boundaries',
-      code: `try {\n  // potentially throwing operation\n} catch (error) {\n  console.error("Operation failed:", error);\n}`
-    });
-    score -= 10;
-  }
-
-  if (issues.length === 0) {
-    issues.push({
-      severity: 'Low',
-      type: 'Best Practice',
-      message: 'Code quality looks clean. Add inline documentation to explain complex segments',
-      line: 1,
-      suggestion: 'Write clear JSDoc comments to document parameter types and logic return structures',
-      code: '/**\n * Calculates values\n * @returns {number}\n */'
-    });
-    score -= 5;
-  }
-
-  let fixedCode = code;
-  if (missingReactImport) {
-    fixedCode = 'import React, { useState } from "react";\n\n' + fixedCode;
-  }
-  fixedCode = fixedCode.replace(/onClick=\{([^}]+)\(([^)]*)\)\}/g, 'onClick={() => $1($2)}');
-
-  return {
-    summary: issues.length > 0 
-      ? `Detected ${issues.length} item(s) to resolve to align with production standards.`
-      : 'Code has solid design, minor suggestions listed.',
-    score: Math.max(20, score),
-    bugs: issues.filter(i => ['Syntax', 'Runtime', 'Logic', 'React'].includes(i.type)),
-    security: issues.filter(i => ['XSS', 'Injection', 'Auth', 'Security'].includes(i.type)),
-    performance: issues.filter(i => ['Algorithm', 'Memory', 'Rendering', 'Performance'].includes(i.type)),
-    suggestions: issues.filter(i => ['Best Practice', 'Style', 'Maintainability'].includes(i.type)),
-    fixedCode: fixedCode,
-    metrics: {
-      complexity: Math.max(10, 100 - issues.length * 6),
-      maintainability: Math.max(10, 100 - issues.length * 8),
-      security: Math.max(10, 100 - issues.filter(i => i.type === 'Security').length * 30),
-      performance: Math.max(10, 100 - issues.filter(i => i.type === 'Performance').length * 20),
-    }
-  };
-};
+import { analyzeCode as fallbackAnalyze } from '../utils/fallbackAnalyzer.js';
 
 // @desc    Analyze code
 // @route   POST /api/ai/analyze
 // @access  Public (Optionally Authenticated)
 export const analyzeCode = async (req, res) => {
-  const { code } = req.body;
+  const { code, language = 'javascript' } = req.body;
   if (!code) {
     return res.status(400).json({ message: 'Code is required for analysis' });
   }
@@ -233,7 +102,7 @@ export const analyzeCode = async (req, res) => {
   try {
     if (!apiKey) {
       console.warn('OpenAI API key not configured on backend. Falling back to local analysis.');
-      analysisResult = getFallbackAnalysis(code);
+      analysisResult = fallbackAnalyze(code, language);
     } else {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -284,14 +153,42 @@ export const analyzeCode = async (req, res) => {
     return res.status(200).json(analysisResult);
   } catch (error) {
     console.error('Code analysis failed:', error);
-    // If external call failed, try to fallback safely rather than crashing
     try {
-      const fallback = getFallbackAnalysis(code);
+      const fallback = fallbackAnalyze(code, language);
       return res.status(200).json(fallback);
     } catch (fbErr) {
       return res.status(500).json({ message: 'Analysis failed', error: error.message });
     }
   }
+};
+
+// Helper to generate local developer assistance replies when API key is missing or fails
+const generateLocalChatFallback = (message) => {
+  const msg = message.toLowerCase();
+  
+  if (msg.includes('loop') || msg.includes('for') || msg.includes('map') || msg.includes('foreach')) {
+    return "When working with loops in JavaScript, prefer functional methods like `.map()`, `.filter()`, and `.reduce()` for cleaner and more readable code. If you are doing intense calculations, verify that the complexity does not exceed O(N log N) to keep the main thread responsive.";
+  }
+  if (msg.includes('react') || msg.includes('hook') || msg.includes('state') || msg.includes('useeffect')) {
+    return "For React components, make sure hooks are called at the top level and not inside loops or conditionals. Additionally, always clean up side-effects (like event listeners or timers) inside a `useEffect` cleanup return function to avoid memory leaks.";
+  }
+  if (msg.includes('security') || msg.includes('vuln') || msg.includes('password') || msg.includes('sql') || msg.includes('token')) {
+    return "To secure your application, make sure to sanitize user inputs, avoid dynamic query string concatenation to protect against injection, store tokens securely in HTTP-only cookies or authorization headers, and never hardcode api secrets.";
+  }
+  if (msg.includes('performance') || msg.includes('slow') || msg.includes('memory') || msg.includes('leak')) {
+    return "For optimal performance, leverage caching layers where applicable, use code-splitting/lazy-loading for large bundles, make sure database indexes match your query filters, and clean up active listeners and timers when components unmount.";
+  }
+  if (msg.includes('auth') || msg.includes('login') || msg.includes('jwt')) {
+    return "Ensure JWT tokens are signed using a strong private key (JWT_SECRET) with reasonable expiration times. Use middleware to verify signatures and populate route-handler request objects securely.";
+  }
+  
+  const defaultResponses = [
+    "I am here to help you debug and optimize your code! Feel free to paste a code snippet or ask about architecture patterns.",
+    "Good design requires separation of concerns, writing clean unit tests, and structuring models to match logic specifications.",
+    "Make sure code imports resolve properly, dependencies are up-to-date, and all error boundaries handle unexpected exceptions gracefully.",
+    "Let me know what coding problem or logic structure you would like to refactor or design next."
+  ];
+  return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
 };
 
 // @desc    AI Assistant chat
@@ -308,14 +205,7 @@ export const chat = async (req, res) => {
 
   try {
     if (!apiKey) {
-      // Simple mock chat responses for developer convenience
-      const responses = [
-        "In modern JavaScript, it is recommended to use array methods like .map() or .filter() over traditional for loops to improve readability.",
-        "To handle asynchronous tasks gracefully, use async/await within try-catch blocks to capture exceptions.",
-        "React 19 doesn't require importing React at the top of component files due to the auto runtime, but hooks must still follow the rules of hooks.",
-        "To optimize database performance, verify that fields utilized in MongoDB query filters are indexed properly."
-      ];
-      aiReply = responses[Math.floor(Math.random() * responses.length)] + "\n\n(Note: Set backend OPENAI_API_KEY for real responses)";
+      aiReply = generateLocalChatFallback(message) + "\n\n(Note: Backend OPENAI_API_KEY is not configured; using local assistant logic)";
     } else {
       const messages = [
         { role: 'system', content: CHAT_SYSTEM_PROMPT },
@@ -373,7 +263,30 @@ export const chat = async (req, res) => {
     return res.status(200).json({ reply: aiReply, conversationId: finalId });
   } catch (error) {
     console.error('AI chat failed:', error);
-    return res.status(500).json({ message: 'Chat interaction failed', error: error.message });
+    try {
+      aiReply = generateLocalChatFallback(message) + "\n\n(Note: OpenAI API failed or rate-limited; using local assistant fallback)";
+      let finalId = conversationId;
+      if (req.user && req.user.id) {
+        let conversation;
+        if (conversationId) {
+          conversation = await Conversation.findOne({ _id: conversationId, userId: req.user.id });
+        }
+        if (!conversation) {
+          conversation = await Conversation.create({
+            userId: req.user.id,
+            title: message.substring(0, 40) + (message.length > 40 ? '...' : ''),
+            messages: []
+          });
+          finalId = conversation._id;
+        }
+        conversation.messages.push({ role: 'user', content: message });
+        conversation.messages.push({ role: 'assistant', content: aiReply });
+        await conversation.save();
+      }
+      return res.status(200).json({ reply: aiReply, conversationId: finalId });
+    } catch (fallbackError) {
+      return res.status(500).json({ message: 'Chat interaction failed', error: error.message });
+    }
   }
 };
 

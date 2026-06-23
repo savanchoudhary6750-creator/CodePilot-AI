@@ -8,7 +8,8 @@ class AIService {
    */
   async analyzeCode(code) {
     try {
-      const response = await apiService.post('/ai/analyze', { code });
+      const language = localStorage.getItem('reviewLanguage') || 'javascript';
+      const response = await apiService.post('/ai/analyze', { code, language });
       return response;
     } catch (error) {
       console.error('AI analysis failed:', error);

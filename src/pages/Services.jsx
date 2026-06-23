@@ -130,7 +130,7 @@ export default function Services() {
             </button>
             <span className={`text-sm font-semibold ${annualBilling ? 'text-white' : 'text-slate-400'} flex items-center gap-1.5`}>
               Annual Billing
-              <span className="text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-450 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">
                 Save 20%
               </span>
             </span>
@@ -172,7 +172,7 @@ export default function Services() {
                   <ul className="space-y-3.5 mb-8">
                     {tier.features.map((f, i) => (
                       <li key={i} className="flex items-start gap-2.5 text-sm text-slate-300">
-                        <FiCheck className="text-emerald-450 flex-shrink-0 mt-0.5 w-4 h-4" />
+                        <FiCheck className="text-emerald-400 flex-shrink-0 mt-0.5 w-4 h-4" />
                         <span>{f}</span>
                       </li>
                     ))}

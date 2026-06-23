@@ -1,28 +1,32 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  FiArrowLeft, 
-  FiCheckCircle, 
-  FiAlertTriangle, 
-  FiXCircle, 
-  FiCopy, 
-  FiDownload, 
-  FiCode, 
-  FiShield, 
-  FiZap, 
-  FiFileText,
-  FiActivity
-} from "react-icons/fi";
+  LuArrowLeft, 
+  LuTriangleAlert, 
+  LuCode, 
+  LuShield, 
+  LuZap, 
+  LuFileText,
+  LuActivity,
+  LuSearch,
+  LuDownload,
+  LuCopy,
+  LuCheck,
+  LuCircleCheck
+} from "react-icons/lu";
 import PageLayout, { Container } from '../layouts/PageLayout';
-import { LoadingSpinner } from '../shared/components';
+import { LoadingSpinner, Badge, Input, CodeBlock, ReviewCard, MetricCard, Button } from '../shared/components';
 import { aiService } from '../services/aiService';
 import toast from 'react-hot-toast';
 
 export default function Review() {
   const [result, setResult] = useState(null);
-  const [copied, setCopied] = useState(false);
   const [analyzing, setAnalyzing] = useState(true);
+  const [activeTab, setActiveTab] = useState('source'); // 'source' or 'optimized'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterSeverity, setFilterSeverity] = useState('all');
+  const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -44,6 +48,7 @@ export default function Review() {
         }
       } else {
         const code = localStorage.getItem("reviewCode");
+        const language = localStorage.getItem("reviewLanguage") || "javascript";
         if (!code) {
           navigate("/");
           return;
@@ -51,7 +56,7 @@ export default function Review() {
 
         setAnalyzing(true);
         try {
-          const analysisResult = await aiService.analyzeCode(code);
+          const analysisResult = await aiService.analyzeCode(code, language);
           setResult(analysisResult);
         } catch (error) {
           console.error('Failed to analyze code:', error);
@@ -70,57 +75,39 @@ export default function Review() {
   };
 
   const handleCopy = () => {
-    if (result?.fixedCode) {
-      navigator.clipboard.writeText(result.fixedCode);
+    const codeToCopy = activeTab === 'source' 
+      ? (result?.code || localStorage.getItem("reviewCode") || '')
+      : (result?.fixedCode || '');
+      
+    if (codeToCopy) {
+      navigator.clipboard.writeText(codeToCopy);
       setCopied(true);
-      toast.success('Fixed code copied to clipboard!');
+      toast.success(`${activeTab === 'source' ? 'Source' : 'Optimized'} code copied!`);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
   const handleDownload = () => {
-    if (result?.fixedCode) {
-      const blob = new Blob([result.fixedCode], { type: 'text/plain' });
+    const codeToDownload = activeTab === 'source'
+      ? (result?.code || localStorage.getItem("reviewCode") || '')
+      : (result?.fixedCode || '');
+      
+    if (codeToDownload) {
+      const blob = new Blob([codeToDownload], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'fixed-code.js';
+      a.download = activeTab === 'source' ? 'source-code.txt' : 'optimized-code.js';
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Downloading fixed-code.js');
-    }
-  };
-
-  const getSeverityIcon = (severity) => {
-    switch (severity) {
-      case 'High':
-        return <FiXCircle className="w-5 h-5 text-rose-400" />;
-      case 'Medium':
-        return <FiAlertTriangle className="w-5 h-5 text-amber-400" />;
-      case 'Low':
-        return <FiCheckCircle className="w-5 h-5 text-emerald-400" />;
-      default:
-        return null;
-    }
-  };
-
-  const getSeverityColor = (severity) => {
-    switch (severity) {
-      case 'High':
-        return 'border-rose-500/20 bg-rose-500/5 text-rose-200';
-      case 'Medium':
-        return 'border-amber-500/20 bg-amber-500/5 text-amber-200';
-      case 'Low':
-        return 'border-emerald-500/20 bg-emerald-500/5 text-emerald-200';
-      default:
-        return 'border-slate-800 bg-slate-900/50 text-slate-300';
+      toast.success(`Downloading ${a.download}`);
     }
   };
 
   const getScoreColor = (score) => {
-    if (score >= 80) return 'from-emerald-400 to-teal-500';
-    if (score >= 60) return 'from-amber-400 to-orange-500';
-    return 'from-rose-400 to-red-500';
+    if (score >= 80) return 'success';
+    if (score >= 60) return 'warning';
+    return 'danger';
   };
 
   const getScoreLabel = (score) => {
@@ -130,12 +117,32 @@ export default function Review() {
     return 'Unstable/Refactor Needed';
   };
 
-  const getScoreLabelColor = (score) => {
-    if (score >= 80) return 'text-emerald-400';
-    if (score >= 60) return 'text-amber-400';
-    if (score >= 40) return 'text-orange-400';
-    return 'text-rose-400';
+  // Combine issues into a single queryable list
+  const getIssues = () => {
+    if (!result) return [];
+    
+    const bugs = (result.bugs || []).map(b => ({ ...b, category: 'bug' }));
+    const security = (result.security || []).map(s => ({ ...s, category: 'security' }));
+    const performance = (result.performance || []).map(p => ({ ...p, category: 'performance' }));
+    const suggestions = (result.suggestions || []).map(g => ({ ...g, category: 'suggestion' }));
+    
+    return [...bugs, ...security, ...performance, ...suggestions];
   };
+
+  const allIssues = getIssues();
+
+  // Filter issues based on search and selected severity dropdown
+  const filteredIssues = allIssues.filter(issue => {
+    const matchesSearch = 
+      issue.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (issue.suggestion && issue.suggestion.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+    const matchesSeverity = 
+      filterSeverity === 'all' || 
+      issue.severity.toLowerCase() === filterSeverity.toLowerCase();
+      
+    return matchesSearch && matchesSeverity;
+  });
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -148,12 +155,12 @@ export default function Review() {
   };
 
   return (
-    <PageLayout className="bg-[#0B1120] text-slate-100 min-h-screen relative overflow-hidden pb-16">
+    <PageLayout className="bg-[#020617] text-slate-100 min-h-screen relative overflow-hidden pb-16">
       {/* Background Blurs */}
       <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-[20%] left-[-10%] w-[50%] h-[50%] bg-purple-500/5 rounded-full blur-[120px] pointer-events-none"></div>
 
-      <Container className="py-8 relative z-10">
+      <Container className="py-8 px-4 relative z-10 max-w-7xl">
         {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
@@ -161,27 +168,38 @@ export default function Review() {
           className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4"
         >
           <div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold mb-1">
+            <h1 className="text-3xl font-extrabold tracking-tight">
               Analysis <span className="bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">Scorecard</span>
             </h1>
-            <p className="text-slate-400 text-sm">
+            <p className="text-slate-400 text-xs mt-1">
               {analyzing ? 'Reading structural elements of code...' : 'Review completed successfully'}
             </p>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+          <Button
+            variant="secondary"
             onClick={handleBack}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#1E293B] border border-slate-800 hover:bg-slate-800 hover:border-slate-700 rounded-xl text-sm font-semibold transition-all"
+            className="flex items-center gap-2"
           >
-            <FiArrowLeft className="w-4 h-4" />
+            <LuArrowLeft className="w-4 h-4" />
             Back to Editor
-          </motion.button>
+          </Button>
         </motion.div>
 
         {analyzing ? (
-          <div className="flex flex-col items-center justify-center py-24 animate-pulse">
-            <LoadingSpinner size="xl" text="Reading structural elements of code..." />
+          /* Modern Loading Skeletons */
+          <div className="space-y-8 animate-pulse">
+            <div className="h-64 bg-slate-900/60 border border-slate-800 rounded-3xl p-8 flex justify-between items-center">
+              <div className="space-y-4 w-1/3">
+                <div className="h-4 bg-slate-800 rounded w-3/4"></div>
+                <div className="h-8 bg-slate-800 rounded w-1/2"></div>
+                <div className="h-4 bg-slate-800 rounded w-2/3"></div>
+              </div>
+              <div className="h-32 w-32 bg-slate-800 rounded-full"></div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="h-96 bg-slate-900/40 border border-slate-850 rounded-3xl"></div>
+              <div className="h-96 bg-slate-900/40 border border-slate-850 rounded-3xl"></div>
+            </div>
           </div>
         ) : (
           <motion.div
@@ -193,238 +211,183 @@ export default function Review() {
             {/* Score Card Panel */}
             <motion.div 
               variants={itemVariants}
-              className="bg-[#111827]/60 border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-xl"
+              className="bg-[#111827]/40 backdrop-blur border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl"
             >
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-6">
                 <div>
-                  <h2 className="text-lg font-bold text-slate-200 mb-1 flex items-center gap-2">
-                    <FiActivity className="text-indigo-400" />
+                  <h2 className="text-base font-bold text-white mb-1 flex items-center gap-2">
+                    <LuActivity className="text-indigo-400" />
                     Overall Code Health
                   </h2>
-                  <p className="text-xs text-slate-400">Score evaluated based on code complexities, warning flags, and rules</p>
+                  <p className="text-xs text-slate-400 font-medium">Score evaluated based on vulnerabilities, complexity metrics, and guidelines</p>
                 </div>
                 <div className="text-left sm:text-right">
-                  <div className={`text-5xl font-extrabold bg-gradient-to-r ${getScoreColor(result?.score || 0)} bg-clip-text text-transparent`}>
+                  <div className="text-4xl font-extrabold bg-gradient-to-r from-indigo-400 to-purple-500 bg-clip-text text-transparent">
                     {result?.score}/100
                   </div>
-                  <div className={`${getScoreLabelColor(result?.score || 0)} font-bold text-sm mt-1`}>
-                    {getScoreLabel(result?.score || 0)}
+                  <div className="mt-1">
+                    <Badge severity={getScoreColor(result?.score || 0)}>
+                      {getScoreLabel(result?.score || 0)}
+                    </Badge>
                   </div>
                 </div>
               </div>
 
               {/* Metrics */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-850">
-                <div className="bg-[#0B1120]/45 border border-slate-850 p-4 rounded-xl text-center">
-                  <div className="flex items-center justify-center gap-1.5 mb-1">
-                    <FiCode className="w-4 h-4 text-indigo-400" />
-                    <span className="text-xs text-slate-400 font-semibold">Complexity</span>
-                  </div>
-                  <div className="text-2xl font-extrabold text-white">{result?.metrics?.complexity || 0}</div>
-                </div>
-                <div className="bg-[#0B1120]/45 border border-slate-850 p-4 rounded-xl text-center">
-                  <div className="flex items-center justify-center gap-1.5 mb-1">
-                    <FiFileText className="w-4 h-4 text-emerald-400" />
-                    <span className="text-xs text-slate-400 font-semibold">Maintainability</span>
-                  </div>
-                  <div className="text-2xl font-extrabold text-white">{result?.metrics?.maintainability || 0}%</div>
-                </div>
-                <div className="bg-[#0B1120]/45 border border-slate-850 p-4 rounded-xl text-center">
-                  <div className="flex items-center justify-center gap-1.5 mb-1">
-                    <FiShield className="w-4 h-4 text-purple-400" />
-                    <span className="text-xs text-slate-400 font-semibold">Security</span>
-                  </div>
-                  <div className="text-2xl font-extrabold text-white">{result?.metrics?.security || 0}%</div>
-                </div>
-                <div className="bg-[#0B1120]/45 border border-slate-850 p-4 rounded-xl text-center">
-                  <div className="flex items-center justify-center gap-1.5 mb-1">
-                    <FiZap className="w-4 h-4 text-amber-400" />
-                    <span className="text-xs text-slate-400 font-semibold">Performance</span>
-                  </div>
-                  <div className="text-2xl font-extrabold text-white">{result?.metrics?.performance || 0}%</div>
-                </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-850/60">
+                <MetricCard
+                  title="Complexity"
+                  value={result?.metrics?.complexity || 0}
+                  icon={LuCode}
+                  status="primary"
+                />
+                <MetricCard
+                  title="Maintainability"
+                  value={`${result?.metrics?.maintainability || 0}%`}
+                  icon={LuFileText}
+                  status="success"
+                />
+                <MetricCard
+                  title="Security"
+                  value={`${result?.metrics?.security || 0}%`}
+                  icon={LuShield}
+                  status="primary"
+                />
+                <MetricCard
+                  title="Performance"
+                  value={`${result?.metrics?.performance || 0}%`}
+                  icon={LuZap}
+                  status="warning"
+                />
               </div>
             </motion.div>
 
-            {/* Layout Grid: Left (Issues), Right (Fixed Code) */}
+            {/* Split Screen Review Layout: Left Code, Right Issues */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-              {/* Issues list */}
-              <motion.div variants={itemVariants} className="space-y-4">
-                <div className="bg-[#111827]/40 border border-slate-800 rounded-3xl p-6 shadow-xl">
-                  <h2 className="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
-                    <FiAlertTriangle className="text-amber-500" />
-                    Detected Issues ({
-                      (result?.bugs?.length || 0) + 
-                      (result?.security?.length || 0) + 
-                      (result?.performance?.length || 0) + 
-                      (result?.suggestions?.length || 0)
-                    })
-                  </h2>
-
-                  {result?.summary && (
-                    <div className="mb-6 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
-                      <p className="text-indigo-300 text-sm leading-relaxed">{result.summary}</p>
-                    </div>
-                  )}
-
-                  <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                    {/* Bugs */}
-                    {result?.bugs?.map((issue, idx) => (
-                      <div key={`bug-${idx}`} className={`p-4 rounded-2xl border ${getSeverityColor(issue.severity)}`}>
-                        <div className="flex items-start gap-3">
-                          <div className="mt-0.5">{getSeverityIcon(issue.severity)}</div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                              <span className="font-bold text-xs uppercase tracking-wider">{issue.severity} Severity</span>
-                              <span className="text-[10px] bg-slate-950/40 border border-slate-800 px-2 py-0.5 rounded text-slate-400 uppercase font-semibold">{issue.type}</span>
-                              <span className="text-[10px] bg-slate-950/40 border border-slate-800 px-2 py-0.5 rounded text-slate-400 font-semibold">Line {issue.line}</span>
-                            </div>
-                            <p className="text-slate-300 text-sm leading-relaxed mb-3">{issue.message}</p>
-                            {issue.suggestion && (
-                              <div className="bg-slate-950/50 border border-slate-850 p-3 rounded-xl">
-                                <p className="text-xs text-slate-400 leading-relaxed mb-2">
-                                  <span className="font-semibold text-slate-300">Fix Suggestion:</span> {issue.suggestion}
-                                </p>
-                                {issue.code && (
-                                  <pre className="text-xs text-emerald-400 font-mono bg-slate-900 p-2.5 rounded-lg overflow-x-auto border border-slate-850">
-                                    <code>{issue.code}</code>
-                                  </pre>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Security */}
-                    {result?.security?.map((issue, idx) => (
-                      <div key={`sec-${idx}`} className={`p-4 rounded-2xl border ${getSeverityColor(issue.severity)}`}>
-                        <div className="flex items-start gap-3">
-                          <div className="mt-0.5">{getSeverityIcon(issue.severity)}</div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                              <span className="font-bold text-xs uppercase tracking-wider">{issue.severity} Severity</span>
-                              <span className="text-[10px] bg-slate-950/40 border border-slate-800 px-2 py-0.5 rounded text-slate-400 uppercase font-semibold">{issue.type}</span>
-                              <span className="text-[10px] bg-slate-950/40 border border-slate-800 px-2 py-0.5 rounded text-slate-400 font-semibold">Line {issue.line}</span>
-                            </div>
-                            <p className="text-slate-300 text-sm leading-relaxed mb-3">{issue.message}</p>
-                            {issue.suggestion && (
-                              <div className="bg-slate-950/50 border border-slate-850 p-3 rounded-xl">
-                                <p className="text-xs text-slate-400 leading-relaxed mb-2">
-                                  <span className="font-semibold text-slate-300">Fix Suggestion:</span> {issue.suggestion}
-                                </p>
-                                {issue.code && (
-                                  <pre className="text-xs text-emerald-400 font-mono bg-slate-900 p-2.5 rounded-lg overflow-x-auto border border-slate-850">
-                                    <code>{issue.code}</code>
-                                  </pre>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Performance */}
-                    {result?.performance?.map((issue, idx) => (
-                      <div key={`perf-${idx}`} className={`p-4 rounded-2xl border ${getSeverityColor(issue.severity)}`}>
-                        <div className="flex items-start gap-3">
-                          <div className="mt-0.5">{getSeverityIcon(issue.severity)}</div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                              <span className="font-bold text-xs uppercase tracking-wider">{issue.severity} Severity</span>
-                              <span className="text-[10px] bg-slate-950/40 border border-slate-800 px-2 py-0.5 rounded text-slate-400 uppercase font-semibold">{issue.type}</span>
-                              <span className="text-[10px] bg-slate-950/40 border border-slate-800 px-2 py-0.5 rounded text-slate-400 font-semibold">Line {issue.line}</span>
-                            </div>
-                            <p className="text-slate-300 text-sm leading-relaxed mb-3">{issue.message}</p>
-                            {issue.suggestion && (
-                              <div className="bg-slate-950/50 border border-slate-850 p-3 rounded-xl">
-                                <p className="text-xs text-slate-400 leading-relaxed mb-2">
-                                  <span className="font-semibold text-slate-300">Fix Suggestion:</span> {issue.suggestion}
-                                </p>
-                                {issue.code && (
-                                  <pre className="text-xs text-emerald-400 font-mono bg-slate-900 p-2.5 rounded-lg overflow-x-auto border border-slate-850">
-                                    <code>{issue.code}</code>
-                                  </pre>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Suggestions */}
-                    {result?.suggestions?.map((issue, idx) => (
-                      <div key={`sug-${idx}`} className={`p-4 rounded-2xl border ${getSeverityColor(issue.severity)}`}>
-                        <div className="flex items-start gap-3">
-                          <div className="mt-0.5">{getSeverityIcon(issue.severity)}</div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                              <span className="font-bold text-xs uppercase tracking-wider">{issue.severity} Severity</span>
-                              <span className="text-[10px] bg-slate-950/40 border border-slate-800 px-2 py-0.5 rounded text-slate-400 uppercase font-semibold">{issue.type}</span>
-                              <span className="text-[10px] bg-slate-950/40 border border-slate-800 px-2 py-0.5 rounded text-slate-400 font-semibold">Line {issue.line}</span>
-                            </div>
-                            <p className="text-slate-300 text-sm leading-relaxed mb-3">{issue.message}</p>
-                            {issue.suggestion && (
-                              <div className="bg-slate-950/50 border border-slate-850 p-3 rounded-xl">
-                                <p className="text-xs text-slate-400 leading-relaxed mb-2">
-                                  <span className="font-semibold text-slate-300">Improvement:</span> {issue.suggestion}
-                                </p>
-                                {issue.code && (
-                                  <pre className="text-xs text-emerald-400 font-mono bg-slate-900 p-2.5 rounded-lg overflow-x-auto border border-slate-850">
-                                    <code>{issue.code}</code>
-                                  </pre>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Fixed Code Blocks */}
+              
+              {/* Left Column: Code Editor Container */}
               <motion.div variants={itemVariants} className="space-y-4">
                 <div className="bg-[#111827]/40 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col">
-                  <div className="flex justify-between items-center mb-4 gap-4">
-                    <h2 className="text-lg font-bold text-slate-200">
-                      Optimized Code
-                    </h2>
+                  <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+                    {/* View Tabs */}
+                    <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-850">
+                      <button
+                        onClick={() => setActiveTab('source')}
+                        className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                          activeTab === 'source' 
+                            ? 'bg-[#1E293B] text-white' 
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Original Source
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('optimized')}
+                        className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                          activeTab === 'optimized' 
+                            ? 'bg-[#1E293B] text-white' 
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Optimized Code
+                      </button>
+                    </div>
+
+                    {/* Editor actions */}
                     <div className="flex gap-2">
                       <button
                         onClick={handleCopy}
-                        className="flex items-center gap-2 px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl transition-all text-xs font-semibold text-slate-300"
+                        className="p-2 bg-slate-950 border border-slate-850 hover:border-slate-700 hover:bg-slate-900 rounded-xl transition-all text-slate-400 hover:text-white"
+                        title="Copy Code"
                       >
-                        <FiCopy className="w-3.5 h-3.5" />
-                        {copied ? 'Copied' : 'Copy'}
+                        {copied ? <LuCheck className="w-4 h-4 text-emerald-400" /> : <LuCopy className="w-4 h-4" />}
                       </button>
                       <button
                         onClick={handleDownload}
-                        className="flex items-center gap-2 px-3.5 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 rounded-xl transition-all text-xs font-semibold text-white shadow"
+                        className="p-2 bg-slate-950 border border-slate-850 hover:border-slate-700 hover:bg-slate-900 rounded-xl transition-all text-slate-400 hover:text-white"
+                        title="Download file"
                       >
-                        <FiDownload className="w-3.5 h-3.5" />
-                        Download
+                        <LuDownload className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
 
-                  <div className="bg-slate-950 border border-slate-850 rounded-2xl overflow-hidden shadow-inner">
-                    <div className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-900 border-b border-slate-850">
-                      <div className="w-2.5 h-2.5 bg-rose-500 rounded-full"></div>
-                      <div className="w-2.5 h-2.5 bg-amber-500 rounded-full"></div>
-                      <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
-                      <span className="ml-3 text-[10px] text-slate-500 font-mono">optimized-code.js</span>
+                  {/* VS Code Inspired code editor container */}
+                  <CodeBlock
+                    code={
+                      activeTab === 'source'
+                        ? (result?.code || localStorage.getItem("reviewCode") || '')
+                        : (result?.fixedCode || '')
+                    }
+                    language={localStorage.getItem("reviewLanguage") || 'javascript'}
+                    filename={activeTab === 'source' ? 'source-code.js' : 'optimized-code.js'}
+                    allowFullScreen={true}
+                  />
+                </div>
+              </motion.div>
+
+              {/* Right Column: Search and Collapsible Issue Cards */}
+              <motion.div variants={itemVariants} className="space-y-4">
+                <div className="bg-[#111827]/40 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col">
+                  {/* Search and Filters Header */}
+                  <div className="mb-6 space-y-4">
+                    <h2 className="text-base font-bold text-white flex items-center gap-2">
+                      <LuTriangleAlert className="text-amber-500" />
+                      Detected Issues ({filteredIssues.length})
+                    </h2>
+
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      {/* Search Input */}
+                      <div className="flex-1">
+                        <Input
+                          placeholder="Search issues..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          icon={LuSearch}
+                        />
+                      </div>
+
+                      {/* Dropdown Filters */}
+                      <div>
+                        <select
+                          value={filterSeverity}
+                          onChange={(e) => setFilterSeverity(e.target.value)}
+                          className="w-full sm:w-auto px-4 py-2.5 bg-[#0F172A] border border-slate-800 text-slate-300 rounded-xl focus:outline-none focus:border-indigo-500 text-xs font-bold"
+                        >
+                          <option value="all">All Severities</option>
+                          <option value="critical">Critical</option>
+                          <option value="high">High</option>
+                          <option value="medium">Medium</option>
+                          <option value="low">Low</option>
+                        </select>
+                      </div>
                     </div>
-                    <pre className="p-4 text-emerald-400 font-mono text-xs md:text-sm overflow-x-auto text-left leading-relaxed">
-                      <code>{result?.fixedCode}</code>
-                    </pre>
+                  </div>
+
+                  {/* Collapsible Issue List */}
+                  <div className="space-y-3.5 max-h-[550px] overflow-y-auto pr-1">
+                    {filteredIssues.length === 0 ? (
+                      <div className="text-center py-16 border border-dashed border-slate-850 rounded-2xl">
+                        <LuCircleCheck className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
+                        <p className="text-slate-400 text-xs font-semibold">No issues matching criteria</p>
+                      </div>
+                    ) : (
+                      filteredIssues.map((issue, idx) => (
+                        <ReviewCard
+                          key={`${issue.category}-${idx}`}
+                          severity={issue.severity}
+                          type={issue.type}
+                          line={issue.line}
+                          message={issue.message}
+                          suggestion={issue.suggestion}
+                          codeSnippet={issue.code}
+                        />
+                      ))
+                    )}
                   </div>
                 </div>
               </motion.div>
+
             </div>
           </motion.div>
         )}

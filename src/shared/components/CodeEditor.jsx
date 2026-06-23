@@ -19,7 +19,7 @@ const CodeEditor = ({ code = '', language = 'javascript', readOnly = false, onCh
     <div className="w-full h-full rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600 shadow-lg">
       <div className="bg-gray-100 dark:bg-gray-800 px-4 py-2 flex items-center justify-between border-b border-gray-300 dark:border-gray-600">
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          {language.charAt(0).toUpperCase() + language.slice(1)}
+          {language === 'cpp' ? 'C++' : language.charAt(0).toUpperCase() + language.slice(1)}
         </span>
         <div className="flex space-x-2">
           <div className="w-3 h-3 rounded-full bg-red-500"></div>
