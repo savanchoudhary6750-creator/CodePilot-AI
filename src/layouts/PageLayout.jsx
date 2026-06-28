@@ -1,5 +1,19 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
+
+const sizeClasses = {
+  default: 'py-16 md:py-24',
+  large: 'py-24 md:py-32',
+  small: 'py-10 md:py-16',
+};
+
+const maxWidthClasses = {
+  '4xl': 'max-w-4xl',
+  '5xl': 'max-w-5xl',
+  '6xl': 'max-w-6xl',
+  '7xl': 'max-w-7xl',
+};
 
 const PageLayout = ({ children, className = '' }) => {
   return (
@@ -9,36 +23,41 @@ const PageLayout = ({ children, className = '' }) => {
   );
 };
 
-export const Section = ({ children, className = '', size = 'default', id }) => {
-  const sizeClasses = {
-    default: 'py-16 md:py-24',
-    large: 'py-24 md:py-32',
-    small: 'py-10 md:py-16',
-  };
+PageLayout.propTypes = {
+  children: PropTypes.node.isRequired,
+  className: PropTypes.string,
+};
 
+export const Section = ({ children, className = '', size = 'default', id }) => {
   return (
     <section
       id={id}
-      className={`relative z-10 px-4 sm:px-6 lg:px-8 ${sizeClasses[size]} ${className}`}
+      className={`relative z-10 px-4 sm:px-6 lg:px-8 ${sizeClasses[size] || sizeClasses.default} ${className}`}
     >
       {children}
     </section>
   );
 };
 
-export const Container = ({ children, className = '', maxWidth = '7xl' }) => {
-  const maxWidthClasses = {
-    '4xl': 'max-w-4xl',
-    '5xl': 'max-w-5xl',
-    '6xl': 'max-w-6xl',
-    '7xl': 'max-w-7xl',
-  };
+Section.propTypes = {
+  children: PropTypes.node.isRequired,
+  className: PropTypes.string,
+  size: PropTypes.oneOf(['default', 'large', 'small']),
+  id: PropTypes.string,
+};
 
+export const Container = ({ children, className = '', maxWidth = '7xl' }) => {
   return (
-    <div className={`mx-auto w-full ${maxWidthClasses[maxWidth]} ${className}`}>
+    <div className={`mx-auto w-full ${maxWidthClasses[maxWidth] || maxWidthClasses['7xl']} ${className}`}>
       {children}
     </div>
   );
+};
+
+Container.propTypes = {
+  children: PropTypes.node.isRequired,
+  className: PropTypes.string,
+  maxWidth: PropTypes.oneOf(['4xl', '5xl', '6xl', '7xl']),
 };
 
 export const Hero = ({ 
@@ -105,6 +124,15 @@ export const Hero = ({
       </Container>
     </Section>
   );
+};
+
+Hero.propTypes = {
+  badge: PropTypes.string,
+  title: PropTypes.string.isRequired,
+  subtitle: PropTypes.string,
+  gradientText: PropTypes.string,
+  buttons: PropTypes.node,
+  className: PropTypes.string,
 };
 
 export default PageLayout;

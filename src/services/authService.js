@@ -1,23 +1,36 @@
 import apiService from './apiService';
 
 class AuthService {
+  // Helper to persist auth session
+  setSession(token, user) {
+    if (token) localStorage.setItem('token', token);
+    if (user) localStorage.setItem('user', JSON.stringify(user));
+  }
+
+  // Helper to clear auth session
+  clearSession() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  }
+
   async login(credentials) {
     const response = await apiService.post('/auth/login', credentials);
     if (response.token) {
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
+      this.setSession(response.token, response.user);
     }
     return response;
   }
   
   async register(userData) {
     const response = await apiService.post('/auth/register', userData);
+    if (response.token) {
+      this.setSession(response.token, response.user);
+    }
     return response;
   }
   
   async logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    this.clearSession();
   }
   
   async getMe() {
@@ -41,14 +54,18 @@ class AuthService {
   }
 
   isAuthenticated() {
-    const token = localStorage.getItem('token');
-    return !!token;
+    return !!this.getToken();
   }
 
-  
   getCurrentUser() {
     const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
+    try {
+      return user ? JSON.parse(user) : null;
+    } catch (error) {
+      console.error('Failed to parse persistent user state:', error);
+      this.clearSession();
+      return null;
+    }
   }
   
   getToken() {
